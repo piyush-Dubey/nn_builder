@@ -9,3 +9,4 @@
 .DS_Store
 *to_do_list
 *.ipynb_checkpoints
+.vscode
