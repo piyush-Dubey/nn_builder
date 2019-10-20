@@ -34,7 +34,7 @@ class CNN(nn.Module, Base_Network):
     """
 
     def __init__(self, input_dim, layers_info, output_activation=None,
-                 hidden_activations="relu", dropout=0.0, initialiser="default", batch_norm=False,
+                 hidden_activations="relu", dropout=None, initialiser="default", batch_norm=False,
                  y_range=(), random_seed=0, converted_from_tf_model=False):
         nn.Module.__init__(self)
         self.valid_cnn_hidden_layer_types = {

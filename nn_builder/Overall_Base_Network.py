@@ -25,7 +25,8 @@ class Overall_Base_Network(ABC):
 
         self.hidden_layers = self.create_hidden_layers()
         self.output_layers = self.create_output_layers()
-        self.dropout_layer = self.create_dropout_layer()
+        if self.dropout is not None:
+            self.dropout_layer = self.create_dropout_layer()
         if self.batch_norm: self.batch_norm_layers = self.create_batch_norm_layers()
 
     @abstractmethod
