@@ -11,7 +11,9 @@ class CNN(nn.Module, Base_Network):
         - layers_info: List of layer specifications to specify the hidden layers of the network. Each element of the list must be
                          one of these 6 forms:
                          - ["conv", channels, kernel_size, stride, padding]
+                         - ["convtranspose", channels, kernel_size, stride, padding]
                          - ["maxpool", kernel_size, stride, padding]
+                         - ["maxunpool", kernel_size, stride, padding]
                          - ["avgpool", kernel_size, stride, padding]
                          - ["adaptivemaxpool", output height, output width]
                          - ["adaptiveavgpool", output height, output width]
@@ -36,7 +38,7 @@ class CNN(nn.Module, Base_Network):
                  y_range=(), random_seed=0, converted_from_tf_model=False):
         nn.Module.__init__(self)
         self.valid_cnn_hidden_layer_types = {
-            'conv', 'maxpool', 'maxunpool', 'avgpool', 'adaptivemaxpool', 'adaptiveavgpool', 'linear'}
+            'conv', 'convtranspose', 'maxpool', 'maxunpool', 'avgpool', 'adaptivemaxpool', 'adaptiveavgpool', 'linear'}
         self.valid_layer_types_with_no_parameters = [
             nn.MaxPool2d, nn.MaxUnpool2d, nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.AdaptiveMaxPool2d]
         Base_Network.__init__(self, input_dim, layers_info, output_activation, hidden_activations, dropout, initialiser,
@@ -71,6 +73,7 @@ class CNN(nn.Module, Base_Network):
         """Checks that the user inputs for cnn_hidden_layers were valid. cnn_hidden_layers must be a list of layers where
         each layer must be of one of these forms:
         - ["conv", channels, kernel_size, stride, padding]
+        - ["convtranspose", channels, kernel_size, stride, padding]
         - ["maxpool", kernel_size, stride, padding]
         - ["maxunpool", kernel_size, stride, padding]
         - ["avgpool", kernel_size, stride, padding]
@@ -82,6 +85,8 @@ class CNN(nn.Module, Base_Network):
             self.valid_cnn_hidden_layer_types)
         error_msg_conv_layer = """Conv layer must be of form ['conv', channels, kernel_size, stride, padding] where the 
                                final 4 elements are non-negative integers"""
+        error_msg_convtranspose_layer = """Conv transpose layers must be of form ['conv', channels, kernel_size, stride, padding] 
+                                where the final 4 elements are non-negative integers"""
         error_msg_maxpool_layer = """Maxpool layer must be of form ['maxpool', kernel_size, stride, padding] where the 
                                        final 2 elements are non-negative integers"""
         error_msg_maxunpool_layer = """Maxunpool layer must be of form ['maxunpool', kernel_size, stride, padding] where the
@@ -118,6 +123,11 @@ class CNN(nn.Module, Base_Network):
                 for ix in range(3):
                     assert isinstance(layer[ix+1], int) and layer[ix+1] > 0, error_msg_conv_layer
                 assert isinstance(layer[4], int) and layer[4] >= 0, error_msg_conv_layer
+            elif layer_type_name == "convtranspose":
+                assert len(layer) == 5, error_msg_convtranspose_layer
+                for ix in range(3):
+                    assert isinstance(layer[ix+1], int) and layer[ix+1] > 0, error_msg_convtranspose_layer
+                assert isinstance(layer[4], int) and layer[4] >= 0, error_msg_convtranspose_layer
             elif layer_type_name == "maxpool":
                 assert len(layer) == 4, error_msg_maxpool_layer
                 for ix in range(2):
@@ -182,6 +192,9 @@ class CNN(nn.Module, Base_Network):
         if layer_name == "conv":
             list_to_append_layer_to.extend([nn.Conv2d(in_channels=input_dim[0], out_channels=layer[1], kernel_size=layer[2],
                                                       stride=layer[3], padding=layer[4])])
+        elif layer_name == "convtranspose":
+            list_to_append_layer_to.extend([nn.ConvTranspose2d(
+                in_channels=input_dim[0], out_channels=layer[1], kernel_size=layer[2], stride=layer[3], padding=layer[4])])
         elif layer_name == "maxpool":
             list_to_append_layer_to.extend([nn.MaxPool2d(kernel_size=layer[1],
                                                          stride=layer[2], padding=layer[3])])
@@ -215,6 +228,14 @@ class CNN(nn.Module, Base_Network):
             kernel, stride, padding = layer[2], layer[3], layer[4]
             new_height = int((input_dim[1] - kernel + 2*padding)/stride) + 1
             new_width = int((input_dim[2] - kernel + 2 * padding) / stride) + 1
+            output_dim = (new_channels, new_height, new_width)
+        elif layer_name == "convtranspose":
+            dilation = 1
+            output_padding = 0
+            new_channels = input_dim[0]
+            kernel, stride, padding = layer[1], layer[2], layer[3]
+            new_height = int((input_dim[1] - 1) * stride - 2 * padding + dilation * (kernel - 1) + output_padding + 1)
+            new_width = int((input_dim[2] - 1) * stride - 2 * padding + dilation * (kernel - 1) + output_padding + 1)
             output_dim = (new_channels, new_height, new_width)
         elif layer_name in ["maxpool", "avgpool"]:
             new_channels = input_dim[0]
