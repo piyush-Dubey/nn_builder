@@ -27,13 +27,14 @@ class NN(nn.Module, Base_Network):
         - random_seed: Integer to indicate the random seed you want to use
     """
     def __init__(self, input_dim, layers_info, output_activation=None,
-                 hidden_activations="relu", dropout=0.0, initialiser="default", batch_norm=False,
+                 hidden_activations="relu", dropout=None, initialiser="default", batch_norm=False,
                  columns_of_data_to_be_embedded=[], embedding_dimensions=[], y_range= (), random_seed=0):
         nn.Module.__init__(self)
         self.embedding_to_occur = len(columns_of_data_to_be_embedded) > 0
         self.columns_of_data_to_be_embedded = columns_of_data_to_be_embedded
         self.embedding_dimensions = embedding_dimensions
-        self.embedding_layers = self.create_embedding_layers()
+        if self.embedding_to_occur:
+            self.embedding_layers = self.create_embedding_layers()
         Base_Network.__init__(self, input_dim, layers_info, output_activation, hidden_activations, dropout, initialiser,
                               batch_norm, y_range, random_seed)
 
@@ -75,7 +76,8 @@ class NN(nn.Module, Base_Network):
         """Initialises the parameters in the linear and embedding layers"""
         self.initialise_parameters(self.hidden_layers)
         self.initialise_parameters(self.output_layers)
-        self.initialise_parameters(self.embedding_layers)
+        if self.embedding_to_occur:
+            self.initialise_parameters(self.embedding_layers)
 
     def forward(self, x):
         """Forward pass for the network"""
@@ -118,7 +120,7 @@ class NN(nn.Module, Base_Network):
         for layer_ix, linear_layer in enumerate(self.hidden_layers):
             x = self.get_activation(self.hidden_activations, layer_ix)(linear_layer(x))
             if self.batch_norm: x = self.batch_norm_layers[layer_ix](x)
-            if self.dropout != 0.0: x = self.dropout_layer(x)
+            #if self.dropout is not None: x = self.dropout_layer(x)
         return x
 
     def process_output_layers(self, x):
